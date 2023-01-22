@@ -2,6 +2,7 @@ import { invalidDataError } from "@/errors";
 import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { ObjectSchema } from "joi";
+import { cepValidation } from "@/schemas";
 
 export function validateBody<T>(schema: ObjectSchema<T>): ValidationMiddleware {
   return validate(schema, "body");
@@ -25,4 +26,18 @@ function validate(schema: ObjectSchema, type: "body" | "params") {
   };
 }
 
+export function cepValidate(schema: ObjectSchema, type: "body" | "params", req: Request, res: Response) {
+  const cep = req.body.cep;
+  const { error } = cepValidation.validate(cep);
+  if (!error) {
+    next();
+  } else {
+    return res.status(httpStatus.BAD_REQUEST).send(invalidDataError(error.details.map((d) => d.message)));
+  }
+}
+
 type ValidationMiddleware = (req: Request, res: Response, next: NextFunction)=> void;
+function next() {
+  throw new Error("Function not implemented.");
+}
+

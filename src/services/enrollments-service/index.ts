@@ -4,13 +4,34 @@ import addressRepository, { CreateAddressParams } from "@/repositories/address-r
 import enrollmentRepository, { CreateEnrollmentParams } from "@/repositories/enrollment-repository";
 import { exclude } from "@/utils/prisma-utils";
 import { Address, Enrollment } from "@prisma/client";
+import { CEPAddress } from "@/protocols.js";
 
-async function getAddressFromCEP() {
-  const result = await request.get("https://viacep.com.br/ws/37440000/json/");
+async function getAddressFromCEP(cep: string) {
+  const result= await request.get(`https://viacep.com.br/ws/${cep}/json/`);
 
   if (!result.data) {
     throw notFoundError();
   }
+
+  const location= result.data;
+
+  const address: CEPAddress= {
+    logradouro: location.logradouro,
+    complemento: location.complemento, 
+    bairro: location.bairro, 
+    cidade: location.localidade, 
+    uf: location.uf
+  };
+
+  return address;
+}
+
+async function getStatusCEP(cep: string) {
+  const result= await request.get(`https://viacep.com.br/ws/${cep}/json/`);
+
+  const cityExist: boolean = result.data.erro;
+
+  return cityExist;
 }
 
 async function getOneWithAddressByUserId(userId: number): Promise<GetOneWithAddressByUserIdResult> {
@@ -40,6 +61,11 @@ type GetAddressResult = Omit<Address, "createdAt" | "updatedAt" | "enrollmentId"
 async function createOrUpdateEnrollmentWithAddress(params: CreateOrUpdateEnrollmentWithAddress) {
   const enrollment = exclude(params, "address");
   const address = getAddressForUpsert(params.address);
+  const result= await request.get(`https://viacep.com.br/ws/${params.address.cep}/json/`);
+
+  if (result.data.erro) {
+    return true;
+  }
 
   //TODO - Verificar se o CEP é válido
   const newEnrollment = await enrollmentRepository.upsert(params.userId, enrollment, exclude(enrollment, "userId"));
@@ -61,7 +87,8 @@ export type CreateOrUpdateEnrollmentWithAddress = CreateEnrollmentParams & {
 const enrollmentsService = {
   getOneWithAddressByUserId,
   createOrUpdateEnrollmentWithAddress,
-  getAddressFromCEP
+  getAddressFromCEP,
+  getStatusCEP
 };
 
 export default enrollmentsService;

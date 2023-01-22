@@ -8,6 +8,7 @@ const enrollmentsRouter = Router();
 enrollmentsRouter
   .get("/cep", getAddressFromCEP)
   .all("/*", authenticateToken)
+  .get("/enrollments/cep", getAddressFromCEP)
   .get("/", getEnrollmentByUser)
   .post("/", validateBody(createEnrollmentSchema), postCreateOrUpdateEnrollment);
 

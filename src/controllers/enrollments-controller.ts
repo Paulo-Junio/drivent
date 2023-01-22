@@ -17,11 +17,15 @@ export async function getEnrollmentByUser(req: AuthenticatedRequest, res: Respon
 
 export async function postCreateOrUpdateEnrollment(req: AuthenticatedRequest, res: Response) {
   try {
-    await enrollmentsService.createOrUpdateEnrollmentWithAddress({
+    const result = await enrollmentsService.createOrUpdateEnrollmentWithAddress({
       ...req.body,
       userId: req.userId,
     });
 
+    if (result) {
+      return res.sendStatus(httpStatus.BAD_REQUEST);
+    }
+    
     return res.sendStatus(httpStatus.OK);
   } catch (error) {
     return res.sendStatus(httpStatus.BAD_REQUEST);
@@ -32,8 +36,9 @@ export async function getAddressFromCEP(req: AuthenticatedRequest, res: Response
   const { cep } = req.query as Record<string, string>;
 
   try {
-    const address = await enrollmentsService.getAddressFromCEP();//Na implementação da rota, passar o cep como parâmetro
-    res.status(httpStatus.OK).send(address);
+    const address = await enrollmentsService.getAddressFromCEP(cep);
+
+    return res.status(200).send(address);
   } catch (error) {
     if (error.name === "NotFoundError") {
       return res.send(httpStatus.NO_CONTENT);
